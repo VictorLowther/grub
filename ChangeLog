@@ -1,3 +1,14 @@
+2014-12-11  Victor Lowther  <victor.lowther@gmail.com>
+
+	* grub-core/net/net.c: Allow grub_net_open_real to handle parsing
+	an optional port number for tftp and http network protocols.
+	* grub-core/net/http.c: Expose default port for HTTP in the
+	grub_http_protocol struct.
+	* grub-core/net/tftp.c: Expose default port for TFTP in the
+	grub_tftp_protocol struct.
+	* includegrub/net.h: Extend grub_net_app_protocol and grub_net_t
+	to include the port number.
+
 2014-12-09  Andrei Borzenkov  <arvidjaar@gmail.com>
 
 	* grub-core/term/serial.c (grub_cmd_serial): Fix --rtscts

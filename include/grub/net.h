@@ -245,6 +245,7 @@ struct grub_net_app_protocol
   struct grub_net_app_protocol *next;
   struct grub_net_app_protocol **prev;
   const char *name;
+  grub_uint16_t port;
   grub_err_t (*dir) (grub_device_t device, const char *path,
 		     int (*hook) (const char *filename,
 				  const struct grub_dirhook_info *info));
@@ -264,6 +265,7 @@ typedef struct grub_net
   grub_fs_t fs;
   int eof;
   int stall;
+  grub_uint16_t port;
 } *grub_net_t;
 
 extern grub_net_t (*EXPORT_VAR (grub_net_open)) (const char *name);

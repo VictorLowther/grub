@@ -378,7 +378,7 @@ tftp_open (struct grub_file *file, const char *filename)
     }
 
   data->sock = grub_net_udp_open (addr,
-				  TFTP_SERVER_PORT, tftp_receive,
+				  file->device->net->port, tftp_receive,
 				  file);
   if (!data->sock)
     {
@@ -475,6 +475,7 @@ tftp_packets_pulled (struct grub_file *file)
 static struct grub_net_app_protocol grub_tftp_protocol = 
   {
     .name = "tftp",
+    .port = TFTP_SERVER_PORT,
     .open = tftp_open,
     .close = tftp_close,
     .packets_pulled = tftp_packets_pulled

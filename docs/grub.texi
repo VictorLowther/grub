@@ -2822,9 +2822,17 @@ of the partition when installing GRUB).
 @end example
 
 If you enabled the network support, the special drives
-@code{(@var{protocol}[,@var{server}])} are also available. Supported protocols
+@code{(@var{protocol}[,@var{server}][@var{port}])} are also available. Supported protocols
 are @samp{http} and @samp{tftp}. If @var{server} is omitted, value of
 environment variable @samp{net_default_server} is used.
+If @var{port} is omitted, it defaults to the IANA assigned port for
+that protocol.
+
+@example
+(tftp)
+(http,,8091)
+(http,boot.example.com)
+
 Before using the network drive, you must initialize the network.
 @xref{Network}, for more information.
 

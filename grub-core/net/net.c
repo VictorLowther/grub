@@ -1271,98 +1271,99 @@ static grub_net_t
 grub_net_open_real (const char *name)
 {
   grub_net_app_level_t proto;
-  const char *protname, *server;
-  grub_size_t protnamelen;
-  int try;
+  char *protname, *server;
+  const char *work, *comma;
+  grub_uint16_t port;
+  grub_net_t ret;
+  port = 0;
+  work = name;
+  server = NULL;
+  protname = NULL;
+  ret = NULL;
 
-  if (grub_strncmp (name, "pxe:", sizeof ("pxe:") - 1) == 0)
+  /* Pick off the protocol first. */
+  comma = grub_strchr (work, ':');
+  if (!comma)
+    comma = grub_strchr (work, ',');
+  if (!comma)
     {
-      protname = "tftp";
-      protnamelen = sizeof ("tftp") - 1;
-      server = name + sizeof ("pxe:") - 1;
-    }
-  else if (grub_strcmp (name, "pxe") == 0)
-    {
-      protname = "tftp";
-      protnamelen = sizeof ("tftp") - 1;
-      server = grub_net_default_server;
+      protname = grub_strdup(work);
+      server = grub_strdup(grub_net_default_server);
     }
   else
     {
-      const char *comma;
-      comma = grub_strchr (name, ',');
-      if (comma)
-	{
-	  protnamelen = comma - name;
-	  server = comma + 1;
-	  protname = name;
-	}
+      protname = grub_strndup(work,comma - work);
+      if (!comma[1])
+        {
+          grub_error(GRUB_ERR_NET_BAD_ADDRESS,N_("no server is specified"));
+          goto out;
+        }
+      else if (comma[1] == ',')
+        {
+          /* There is no server, just a port.  Let the server be the default. */
+          server = grub_strdup(grub_net_default_server);
+          port = grub_strtoul(comma + 2,0,10);
+        }
       else
-	{
-	  protnamelen = grub_strlen (name);
-	  server = grub_net_default_server;
-	  protname = name;
-	}
+        {
+          /* We have a server and maybe a port. */
+          work = comma + 1;
+          comma = grub_strchr(work,',');
+          if (!comma)
+            server = grub_strdup(work);
+          else
+            {
+              server = grub_strndup(work,comma - work);
+              port = grub_strtoul(comma + 1,0,10);
+            }
+        }
     }
-  if (!server)
+  /* By now, we have to have a server and a port.
+     If we do not, just die. */
+  if (!server || !protname)
     {
-      grub_error (GRUB_ERR_NET_BAD_ADDRESS,
-		  N_("no server is specified"));
-      return NULL;
-    }  
-
-  for (try = 0; try < 2; try++)
-    {
-      FOR_NET_APP_LEVEL (proto)
-      {
-	if (grub_memcmp (proto->name, protname, protnamelen) == 0
-	    && proto->name[protnamelen] == 0)
-	  {
-	    grub_net_t ret = grub_zalloc (sizeof (*ret));
-	    if (!ret)
-	      return NULL;
-	    ret->protocol = proto;
-	    if (server)
-	      {
-		ret->server = grub_strdup (server);
-		if (!ret->server)
-		  {
-		    grub_free (ret);
-		    return NULL;
-		  }
-	      }
-	    else
-	      ret->server = NULL;
-	    ret->fs = &grub_net_fs;
-	    ret->offset = 0;
-	    ret->eof = 0;
-	    return ret;
-	  }
-      }
-      if (try == 0)
-	{
-	  if (sizeof ("http") - 1 == protnamelen
-	      && grub_memcmp ("http", protname, protnamelen) == 0)
-	    {
-	      grub_dl_load ("http");
-	      grub_errno = GRUB_ERR_NONE;
-	      continue;
-	    }
-	  if (sizeof ("tftp") - 1 == protnamelen
-	      && grub_memcmp ("tftp", protname, protnamelen) == 0)
-	    {
-	      grub_dl_load ("tftp");
-	      grub_errno = GRUB_ERR_NONE;
-	      continue;
-	    }
-	}
-      break;
+      grub_error (GRUB_ERR_UNKNOWN_DEVICE, N_("disk `%s' not found"),
+                  name);
+      goto out;
     }
-
-  /* Restore original error.  */
-  grub_error (GRUB_ERR_UNKNOWN_DEVICE, N_("disk `%s' not found"),
-	      name);
-
+  if (grub_strcmp(protname,"pxe") == 0)
+    {
+      grub_free(protname);
+      protname = grub_strdup("tftp");
+    }
+  if (!grub_dl_load(protname))
+    {
+      grub_error (GRUB_ERR_UNKNOWN_DEVICE, N_("disk `%s' not found"),
+                  name);
+      goto out;
+    }
+  grub_errno = GRUB_ERR_NONE;
+  ret = grub_zalloc (sizeof (*ret));
+  if (!ret)
+    goto out;
+  ret->server = server;
+  ret->fs = &grub_net_fs;
+  ret->offset = 0;
+  ret->eof = 0;
+  FOR_NET_APP_LEVEL (proto)
+  {
+    if (grub_strcmp (proto->name, protname) != 0)
+      continue;
+    ret->protocol = proto;
+    if (!port)
+      ret->port = proto->port;
+    else
+      ret->port = port;
+    grub_free(protname);
+    return ret;
+  }
+ out:
+  if (ret)
+    grub_free(ret);
+  if (server)
+    grub_free(server);
+  if (protname)
+    grub_free(protname);
   return NULL;
 }
 

@@ -392,7 +392,7 @@ http_establish (struct grub_file *file, grub_off_t offset, int initial)
   grub_memcpy (ptr, "\r\n", 2);
 
   data->sock = grub_net_tcp_open (file->device->net->server,
-				  HTTP_PORT, http_receive,
+				  file->device->net->port, http_receive,
 				  http_err, http_err,
 				  file);
   if (!data->sock)
@@ -545,6 +545,7 @@ http_packets_pulled (struct grub_file *file)
 static struct grub_net_app_protocol grub_http_protocol = 
   {
     .name = "http",
+    .port = HTTP_PORT,
     .open = http_open,
     .close = http_close,
     .seek = http_seek,
